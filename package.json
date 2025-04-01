@@ -1,0 +1,48 @@
+{
+  "name": "react-slime-simulation",
+  "version": "1.0.0",
+  "description": "A customizable React component for simulating slime mold behavior.",
+  "author": "Breval Le Floch",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LightInn/react-slime-simulation.git"
+  },
+  "keywords": [
+    "react",
+    "component",
+    "simulation",
+    "slime",
+    "canvas",
+    "generative"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.modern.js",
+  "source": "src/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "microbundle --jsx React.createElement --globals react/jsx-runtime=jsx",
+    "dev": "microbundle watch --jsx React.createElement --globals react/jsx-runtime=jsx",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "devDependencies": {
+    "microbundle": "^0.15.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "dependencies": {
+  },
+  "exports": {
+    ".": {
+       "import": "./dist/index.modern.js",
+       "require": "./dist/index.js"
+     }
+   }
+}
