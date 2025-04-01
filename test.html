@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Slime Simulation</title>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background: #111;
+                height: 100vh;
+                font-family: Arial, sans-serif;
+            }
+
+            canvas {
+                display: block;
+                width: 100%;
+                height: 100%;
+                image-rendering: pixelated;
+                cursor: crosshair;
+            }
+        </style>
+    </head>
+    <body>
+        <script>
+            const svgElement = document.createElement("div");
+            svgElement.style.display = "none";
+            svgElement.innerHTML = `
+        <svg id="spawnShape" width="100%" height="100%" viewBox="0 0 200 350" preserveAspectRatio="xMidYMid meet">
+        <path
+           style="fill:#4d4d4d;stroke-width:0.28222221"
+           d="m 139.80404,116.9222 -12.57184,4.0845 -18.69808,25.7359 -18.207678,-25.06204 c -0.0312,0.0131 -1.84458,0.57745 -4.08813,1.27228 -2.2436,0.69485 -4.09354,1.26889 -4.16873,1.29346 l 21.324788,29.35169 2.48151,-3.41477 c 1.36861,-1.88342 2.50849,-3.43822 2.53318,-3.45509 0.0272,-0.0186 0.0661,-0.007 0.11524,0.0279 l -5.03691,6.93292 c -0.004,-0.004 -0.005,-0.003 -0.01,-0.007 l -0.0548,-0.0455 0.0512,0.0703 -21.570258,29.68914 -0.0227,-0.007 c -0.14592,0.25576 -4.41154,6.9797 -4.5284,7.13807 l 0.0248,0.008 12.38374,-4.02405 18.773018,-25.83873 18.17098,25.00984 c 0.0179,-0.006 0.0347,-0.0119 0.0605,-0.0196 0.0874,-0.0261 2.02716,-0.61525 4.31085,-1.30897 2.15444,-0.65445 3.72738,-1.12491 3.92844,-1.1777 l -21.3341,-29.3641 c -0.0166,0.0379 -4.96526,6.85612 -5.00641,6.89777 -0.0198,0.02 -0.0505,0.009 -0.12092,-0.0439 -10e-4,-7.4e-4 -0.002,-10e-4 -0.003,-0.002 l 5.04827,-6.94841 c 0.0119,0.009 0.0202,0.0175 0.0305,0.0264 l -0.0248,-0.0341 21.57023,-29.68914 0.0129,0.004 0.007,-0.0109 c 0.008,-0.0125 1.06525,-1.63529 2.3487,-3.60598 1.24519,-1.91197 2.20674,-3.38729 2.27014,-3.48299 z m 0.27182,0.0822 -2.2965,3.5264 c -1.26814,1.9472 -2.29714,3.52756 -2.33061,3.57911 l 34.61804,11.24841 v 0.03 c 0.001,-0.002 0.006,-0.0176 0.007,-0.0176 0.0138,0 7.87644,2.44309 8.18141,2.54196 v -0.005 l -8.08299,-11.12435 z m -63.338768,0.0832 -29.6845,9.64489 c 0.0116,0.0592 0.0867,1.82869 0.16692,3.93309 0.0803,2.10486 0.097,4.12231 0.11265,4.33669 -0.002,0.11256 -10e-4,0.18226 -0.005,0.25011 l 34.57619,-11.23445 0.0108,0.0155 c 0.0739,-0.0301 8.09736,-2.51456 8.26254,-2.5585 l -0.0196,-0.0269 h -5.2e-4 z m -29.91652,9.72085 -0.0233,0.007 -7.98298,10.98744 v 31.27096 c 0.13692,0.034 7.82536,2.56591 8.18762,2.69596 v -36.4117 l 0.007,-0.003 c -0.003,-0.0145 -0.007,-0.0236 -0.008,-0.0434 -0.015,-0.1884 0.0635,-2.39446 -0.0145,-4.43435 -0.0779,-2.0399 -0.15047,-3.83122 -0.16124,-3.98064 -0.003,-0.0381 -0.003,-0.0607 -0.005,-0.0889 z m 123.246218,8.84132 v 36.40604 l -0.003,0.001 -0.0134,1.09555 c -0.0148,1.24491 -0.0584,6.7366 -0.0584,7.33495 v 0.20205 l 0.008,-0.003 8.25479,-11.36158 v -31.13201 c -0.1267,-0.04 -8.02784,-2.4939 -8.18813,-2.543 z m -131.252448,33.6961 v 0.008 l 8.22689,11.32386 30.06741,9.76942 c 0.003,-0.007 0.005,-0.0132 0.009,-0.0212 0.0583,-0.0987 4.29712,-6.78772 4.51135,-7.11947 l -34.62734,-11.2507 v -0.006 c -0.0933,-0.0292 -1.85315,-0.60943 -4.11448,-1.35651 -2.23775,-0.7393 -3.94405,-1.30388 -4.07313,-1.34772 z m 130.986318,2.79621 -34.63561,11.25409 -0.0155,-0.0212 c -0.25623,0.0843 -7.96918,2.42572 -8.29148,2.51716 l 0.0145,0.0202 13.52269,4.39353 29.33723,-9.53224 10e-4,-0.54621 c 0.001,-0.57028 0.0619,-7.88987 0.0672,-8.0853 z"
+           id="path3338" />
+        </svg>`;
+            document.body.appendChild(svgElement);
+
+            // 2. Fonction pour rasteriser le SVG en pixels
+            function rasterizeSVG(svgElement, width, height) {
+                // Créer un canvas temporaire pour rasteriser le SVG
+                const tempCanvas = document.createElement("canvas");
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext("2d");
+
+                // Convertir le SVG en image
+                const svgData = new XMLSerializer().serializeToString(
+                    svgElement,
+                );
+                const svgURL =
+                    "data:image/svg+xml;charset=utf-8," +
+                    encodeURIComponent(svgData);
+
+                // Créer une matrice pour stocker les pixels valides
+                const validPixels = [];
+
+                // Fonction pour traiter l'image SVG
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Dessiner l'image centrée dans le canvas
+                        const scale =
+                            Math.min(width / img.width, height / img.height) *
+                            1.6;
+                        const offsetX = (width - img.width * scale) / 2;
+                        const offsetY = (height - img.height * scale) / 2;
+
+                        tempCtx.clearRect(0, 0, width, height);
+                        tempCtx.drawImage(
+                            img,
+                            offsetX,
+                            offsetY,
+                            img.width * scale,
+                            img.height * scale,
+                        );
+
+                        // Extraire les pixels non transparents
+                        const imageData = tempCtx.getImageData(
+                            0,
+                            0,
+                            width,
+                            height,
+                        );
+                        const data = imageData.data;
+
+                        for (let y = 0; y < height; y++) {
+                            for (let x = 0; x < width; x++) {
+                                const index = (y * width + x) * 4;
+                                // Si le pixel n'est pas complètement transparent
+                                if (data[index + 3] > 0) {
+                                    validPixels.push({ x, y });
+                                }
+                            }
+                        }
+
+                        resolve(validPixels);
+                    };
+                    img.src = svgURL;
+                });
+            }
+        </script>
+
+        <canvas id="canvas"></canvas>
+
+        <script>
+            const DEBUG = true;
+            const canvas = document.getElementById("canvas");
+            const ctx = canvas.getContext("2d", { alpha: false });
+
+            // Constants
+            const PIXEL_SCALE = 6;
+            let SIMULATION_WIDTH = Math.floor(window.innerWidth / PIXEL_SCALE);
+            let SIMULATION_HEIGHT = Math.floor(
+                window.innerHeight / PIXEL_SCALE,
+            );
+            const EDGE_THRESHOLD = 3;
+
+            // Random settings
+            const randomSettings = {
+                initialAgents: Math.floor(Math.random() * 501) + 600,
+                sensorOffset: Math.floor(Math.random() * 25) + 5,
+                edgeAvoidance: Math.random().toFixed(1),
+                agentSpeed: (Math.random() * 1.2 + 0.75).toFixed(1),
+                trailStrength: (Math.random() * 2.5 + 0.5).toFixed(1),
+                evaporationRate: (Math.random() * 0.04 + 0.005).toFixed(3),
+                baseHue: Math.floor(Math.random() * 360),
+                hueRange: Math.floor(Math.random() * 60) + 30,
+                lightnessRange: Math.floor(Math.random() * 30) + 20,
+            };
+
+            // Simulation parameters
+            let agents = [];
+            let trailMap;
+            let processedTrailMap;
+            let animationFrameId;
+            let mousePosition = null;
+
+            // Simulation settings
+            let settings = {
+                sensorOffset: randomSettings.sensorOffset,
+                edgeAvoidance: parseFloat(randomSettings.edgeAvoidance),
+                agentSpeed: parseFloat(randomSettings.agentSpeed),
+                trailStrength: parseFloat(randomSettings.trailStrength),
+                evaporationRate: parseFloat(randomSettings.evaporationRate),
+                brushSize: 4,
+                brushStrength: 1.5,
+                lastTime: 0,
+                deltaTime: 0,
+                baseHue: randomSettings.baseHue,
+                hueRange: randomSettings.hueRange,
+                lightnessRange: randomSettings.lightnessRange,
+                escapeThreshold: 0.5 + Math.random() * 0.5,
+            };
+
+            // Initialize canvas
+            function initializeCanvas() {
+                SIMULATION_WIDTH = Math.floor(window.innerWidth / PIXEL_SCALE);
+                SIMULATION_HEIGHT = Math.floor(
+                    window.innerHeight / PIXEL_SCALE,
+                );
+
+                canvas.width = SIMULATION_WIDTH;
+                canvas.height = SIMULATION_HEIGHT;
+                canvas.style.width = window.innerWidth + "px";
+                canvas.style.height = window.innerHeight + "px";
+
+                trailMap = new Float32Array(
+                    SIMULATION_WIDTH * SIMULATION_HEIGHT,
+                );
+                processedTrailMap = new Float32Array(
+                    SIMULATION_WIDTH * SIMULATION_HEIGHT,
+                );
+            }
+
+            // Helper functions
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            function scaleToRange01(value) {
+                return value / 4294967295;
+            }
+
+            function hash(position) {
+                let x = position.x * 1234.5678;
+                let y = position.y * 9012.3456;
+                x = x * x * x * 123456 + y;
+                y = y * y * y * 654321 + x;
+                return (x * y) % 4294967295;
+            }
+
+            // Apply brush effect
+            function applyBrushEffect() {
+                if (!mousePosition) return;
+
+                const brushSize = settings.brushSize;
+                const brushStrength = settings.brushStrength;
+                const centerX = Math.floor(mousePosition.x);
+                const centerY = Math.floor(mousePosition.y);
+                const width = SIMULATION_WIDTH;
+                const height = SIMULATION_HEIGHT;
+
+                for (let y = -brushSize; y <= brushSize; y++) {
+                    for (let x = -brushSize; x <= brushSize; x++) {
+                        if (x * x + y * y <= brushSize * brushSize) {
+                            const px = centerX + x;
+                            const py = centerY + y;
+
+                            if (
+                                px >= 0 &&
+                                px < width &&
+                                py >= 0 &&
+                                py < height
+                            ) {
+                                const index = py * width + px;
+                                const distance = Math.sqrt(x * x + y * y);
+                                const falloff = 1 - distance / brushSize;
+                                trailMap[index] = Math.min(
+                                    1.0,
+                                    trailMap[index] + brushStrength * falloff,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Process trail map
+            function processTrailMap() {
+                const width = SIMULATION_WIDTH;
+                const height = SIMULATION_HEIGHT;
+                const evaporationRate = settings.evaporationRate;
+
+                applyBrushEffect();
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const index = y * width + x;
+                        const originalValue = trailMap[index];
+
+                        if (originalValue <= 0.001) {
+                            processedTrailMap[index] = 0;
+                            continue;
+                        }
+
+                        let sum = 0;
+                        let count = 0;
+
+                        for (let offsetY = -1; offsetY <= 1; offsetY++) {
+                            const sampleY = y + offsetY;
+
+                            if (sampleY >= 0 && sampleY < height) {
+                                const rowIndex = sampleY * width;
+
+                                for (
+                                    let offsetX = -1;
+                                    offsetX <= 1;
+                                    offsetX++
+                                ) {
+                                    const sampleX = x + offsetX;
+
+                                    if (sampleX >= 0 && sampleX < width) {
+                                        sum += trailMap[rowIndex + sampleX];
+                                        count++;
+                                    }
+                                }
+                            }
+                        }
+
+                        const blurResult = sum / count;
+                        const diffusedValue =
+                            originalValue * 0.9 + blurResult * 0.1;
+                        processedTrailMap[index] = Math.max(
+                            0,
+                            diffusedValue - evaporationRate,
+                        );
+                    }
+                }
+
+                [trailMap, processedTrailMap] = [processedTrailMap, trailMap];
+            }
+
+            // Agent class
+            class Agent {
+                constructor() {
+                    // La position sera définie par initAgents
+                    this.position = {
+                        x: 0,
+                        y: 0,
+                    };
+
+                    this.angle = Math.random() * Math.PI * 2;
+                    const hue = settings.baseHue + randomInRange(-20, 20);
+                    this.color = `hsl(${hue}, 80%, 60%)`;
+
+                    this.escapeThreshold = settings.escapeThreshold;
+                    this.isEscaping = false;
+                    this.escapeTime = 0;
+                }
+
+                sense(angleOffset) {
+                    const sensorAngle =
+                        this.angle + angleOffset * (Math.PI / 180);
+                    const sensorOffset = settings.sensorOffset;
+
+                    const sensorDir = {
+                        x: Math.cos(sensorAngle),
+                        y: Math.sin(sensorAngle),
+                    };
+
+                    const sensorCenter = {
+                        x: this.position.x + sensorDir.x * sensorOffset,
+                        y: this.position.y + sensorDir.y * sensorOffset,
+                    };
+
+                    if (
+                        sensorCenter.x < 0 ||
+                        sensorCenter.x >= SIMULATION_WIDTH ||
+                        sensorCenter.y < 0 ||
+                        sensorCenter.y >= SIMULATION_HEIGHT
+                    ) {
+                        return { sum: 0, maxDensity: 0 };
+                    }
+
+                    let sum = 0;
+                    let maxDensity = 0;
+                    const sensorX = Math.floor(sensorCenter.x);
+                    const sensorY = Math.floor(sensorCenter.y);
+                    const width = SIMULATION_WIDTH;
+
+                    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+                        const y = sensorY + offsetY;
+
+                        if (y >= 0 && y < SIMULATION_HEIGHT) {
+                            const rowIndex = y * width;
+
+                            for (let offsetX = -1; offsetX <= 1; offsetX++) {
+                                const x = sensorX + offsetX;
+
+                                if (x >= 0 && x < width) {
+                                    const density = trailMap[rowIndex + x];
+                                    sum += density;
+                                    if (density > maxDensity) {
+                                        maxDensity = density;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return { sum, maxDensity };
+                }
+
+                update() {
+                    const width = SIMULATION_WIDTH;
+                    const height = SIMULATION_HEIGHT;
+                    const deltaTime = settings.deltaTime * 60;
+                    const speed = settings.agentSpeed;
+
+                    // Check if should escape
+                    const forwardSense = this.sense(0);
+                    const shouldEscape =
+                        forwardSense.maxDensity > this.escapeThreshold;
+
+                    if (shouldEscape && !this.isEscaping) {
+                        this.isEscaping = true;
+                        this.escapeTime = 0;
+                    } else if (
+                        !shouldEscape &&
+                        this.isEscaping &&
+                        this.escapeTime > 1.0
+                    ) {
+                        this.isEscaping = false;
+                    }
+
+                    if (this.isEscaping) {
+                        this.escapeTime += deltaTime;
+
+                        // Escape behavior
+                        const leftSense = this.sense(45);
+                        const rightSense = this.sense(-45);
+
+                        if (leftSense.maxDensity > rightSense.maxDensity) {
+                            this.angle -= 0.2 * deltaTime;
+                        } else {
+                            this.angle += 0.2 * deltaTime;
+                        }
+
+                        const escapeSpeed = speed * 1.3;
+                        const direction = {
+                            x: Math.cos(this.angle),
+                            y: Math.sin(this.angle),
+                        };
+
+                        const newPos = {
+                            x: this.position.x + direction.x * escapeSpeed,
+                            y: this.position.y + direction.y * escapeSpeed,
+                        };
+
+                        // Boundary check
+                        if (
+                            newPos.x < 0 ||
+                            newPos.x >= width ||
+                            newPos.y < 0 ||
+                            newPos.y >= height
+                        ) {
+                            if (newPos.x < 0 || newPos.x >= width) {
+                                this.angle =
+                                    Math.PI -
+                                    this.angle +
+                                    randomInRange(-0.2, 0.2);
+                            }
+                            if (newPos.y < 0 || newPos.y >= height) {
+                                this.angle =
+                                    -this.angle + randomInRange(-0.2, 0.2);
+                            }
+
+                            newPos.x = Math.max(
+                                0,
+                                Math.min(width - 0.01, newPos.x),
+                            );
+                            newPos.y = Math.max(
+                                0,
+                                Math.min(height - 0.01, newPos.y),
+                            );
+                        }
+
+                        this.position = newPos;
+                        return;
+                    }
+
+                    // Normal behavior
+                    const nearLeftEdge = this.position.x < EDGE_THRESHOLD;
+                    const nearRightEdge =
+                        this.position.x > width - EDGE_THRESHOLD;
+                    const nearTopEdge = this.position.y < EDGE_THRESHOLD;
+                    const nearBottomEdge =
+                        this.position.y > height - EDGE_THRESHOLD;
+
+                    if (
+                        (nearLeftEdge ||
+                            nearRightEdge ||
+                            nearTopEdge ||
+                            nearBottomEdge) &&
+                        settings.edgeAvoidance > 0
+                    ) {
+                        const turnAmount = randomInRange(
+                            -Math.PI * settings.edgeAvoidance,
+                            Math.PI * settings.edgeAvoidance,
+                        );
+
+                        if (nearLeftEdge) this.angle = turnAmount;
+                        else if (nearRightEdge)
+                            this.angle = Math.PI + turnAmount;
+                        else if (nearTopEdge)
+                            this.angle = Math.PI / 2 + turnAmount;
+                        else if (nearBottomEdge)
+                            this.angle = -Math.PI / 2 + turnAmount;
+                    } else {
+                        const weightForward = this.sense(0).sum;
+                        const weightLeft = this.sense(45).sum;
+                        const weightRight = this.sense(-45).sum;
+
+                        const random = hash({
+                            x: this.position.x + performance.now() * 0.001,
+                            y: this.position.y + performance.now() * 0.001,
+                        });
+                        const randomSteerStrength = scaleToRange01(random);
+
+                        if (
+                            weightForward > weightLeft &&
+                            weightForward > weightRight
+                        ) {
+                            this.angle +=
+                                (randomSteerStrength - 0.5) * 0.1 * deltaTime;
+                        } else if (
+                            weightForward < weightLeft &&
+                            weightForward < weightRight
+                        ) {
+                            this.angle +=
+                                (randomSteerStrength - 0.5) *
+                                2 *
+                                0.5 *
+                                deltaTime;
+                        } else if (weightRight > weightLeft) {
+                            this.angle -= randomSteerStrength * 0.5 * deltaTime;
+                        } else if (weightLeft > weightRight) {
+                            this.angle += randomSteerStrength * 0.5 * deltaTime;
+                        }
+                    }
+
+                    // Move agent
+                    const direction = {
+                        x: Math.cos(this.angle),
+                        y: Math.sin(this.angle),
+                    };
+
+                    const newPos = {
+                        x: this.position.x + direction.x * speed,
+                        y: this.position.y + direction.y * speed,
+                    };
+
+                    // Boundary check
+                    if (
+                        newPos.x < 0 ||
+                        newPos.x >= width ||
+                        newPos.y < 0 ||
+                        newPos.y >= height
+                    ) {
+                        if (newPos.x < 0 || newPos.x >= width) {
+                            this.angle =
+                                Math.PI - this.angle + randomInRange(-0.2, 0.2);
+                        }
+                        if (newPos.y < 0 || newPos.y >= height) {
+                            this.angle = -this.angle + randomInRange(-0.2, 0.2);
+                        }
+
+                        newPos.x = Math.max(
+                            0,
+                            Math.min(width - 0.01, newPos.x),
+                        );
+                        newPos.y = Math.max(
+                            0,
+                            Math.min(height - 0.01, newPos.y),
+                        );
+                    }
+
+                    this.position = newPos;
+
+                    // Leave trail
+                    const trailX = Math.floor(this.position.x);
+                    const trailY = Math.floor(this.position.y);
+
+                    if (
+                        trailX >= 0 &&
+                        trailX < width &&
+                        trailY >= 0 &&
+                        trailY < height
+                    ) {
+                        const index = trailY * width + trailX;
+                        trailMap[index] = Math.min(
+                            1.0,
+                            trailMap[index] + settings.trailStrength,
+                        );
+                    }
+                }
+            }
+
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]]; // Échange
+                }
+            }
+
+            // Initialize agents
+            async function initAgents(count) {
+                // Obtenir l'élément SVG
+                const svgElement = document.getElementById("spawnShape");
+
+                // Rasteriser le SVG selon les dimensions de la simulation
+                const validPixels = await rasterizeSVG(
+                    svgElement,
+                    SIMULATION_WIDTH,
+                    SIMULATION_HEIGHT,
+                );
+
+                agents = [];
+
+                if (validPixels.length === 0) {
+                    // Fallback en cas d'erreur de rasterisation
+                    for (let i = 0; i < count; i++) {
+                        agents.push(new Agent());
+                    }
+                    return;
+                }
+
+                // Mélanger les pixels valides une première fois
+                shuffle(validPixels);
+
+                let pixelIndex = 0;
+
+                // Créer des agents basés sur les pixels valides
+                for (let i = 0; i < count; i++) {
+                    // Reshuffle si tous les pixels ont été utilisés
+                    if (pixelIndex >= validPixels.length) {
+                        shuffle(validPixels);
+                        pixelIndex = 0;
+                    }
+
+                    const agent = new Agent();
+                    const pixel = validPixels[pixelIndex];
+
+                    // Positionner l'agent sur un pixel valide
+                    agent.position = {
+                        x: pixel.x,
+                        y: pixel.y,
+                    };
+
+                    // Angle aléatoire pour le mouvement initial
+                    agent.angle = Math.random() * Math.PI * 2;
+
+                    agents.push(agent);
+
+                    pixelIndex++; // Passer au pixel suivant
+                }
+            }
+
+            // Draw trails
+            function drawTrails() {
+                const width = SIMULATION_WIDTH;
+                const height = SIMULATION_HEIGHT;
+
+                ctx.fillStyle = "rgba(0, 0, 0, 1)";
+                ctx.fillRect(0, 0, width, height);
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const index = y * width + x;
+                        const value = trailMap[index];
+
+                        if (value > 0.01) {
+                            const normalizedValue = Math.min(1.0, value);
+                            const hue =
+                                settings.baseHue +
+                                settings.hueRange * (1 - normalizedValue);
+                            const lightness =
+                                50 +
+                                settings.lightnessRange * (1 - normalizedValue);
+
+                            ctx.fillStyle = `hsla(${hue}, 100%, ${lightness}%, ${normalizedValue})`;
+                            ctx.fillRect(x, y, 1, 1);
+                        }
+                    }
+                }
+            }
+
+            // Draw agents
+            function drawAgents() {
+                for (const agent of agents) {
+                    const x = Math.floor(agent.position.x);
+                    const y = Math.floor(agent.position.y);
+
+                    if (
+                        x >= 0 &&
+                        x < SIMULATION_WIDTH &&
+                        y >= 0 &&
+                        y < SIMULATION_HEIGHT
+                    ) {
+                        ctx.fillStyle = agent.color;
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+
+            // Handle resize
+            function handleResize() {
+                initializeCanvas();
+                trailMap = new Float32Array(
+                    SIMULATION_WIDTH * SIMULATION_HEIGHT,
+                );
+                processedTrailMap = new Float32Array(
+                    SIMULATION_WIDTH * SIMULATION_HEIGHT,
+                );
+            }
+
+            // Animation loop
+            function animate(currentTime) {
+                if (settings.lastTime) {
+                    settings.deltaTime = Math.min(
+                        0.1,
+                        (currentTime - settings.lastTime) / 1000,
+                    );
+                }
+                settings.lastTime = currentTime;
+
+                processTrailMap();
+                drawTrails();
+
+                for (const agent of agents) {
+                    agent.update();
+                }
+
+                drawAgents();
+
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            async function reshufleInit(number) {
+                for (let x = 0; x < number; x++) {
+                    await setTimeout(async () => {
+                        // Initialiser les agents selon le SVG
+                        await initAgents(randomSettings.initialAgents);
+                        console.log("shuffle", x);
+
+                        // Dessiner uniquement les agents dans leur position initiale
+
+                        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+                        ctx.fillRect(0, 0, SIMULATION_WIDTH, SIMULATION_HEIGHT);
+                        drawAgents();
+                    }, 100 * x);
+                }
+            }
+
+            // Initialize simulation
+            async function init() {
+                initializeCanvas();
+
+                // Mouse interaction
+                // let mousePosition = null;
+                let inactivityTimeout;
+                const inactivityDelay = 500; // Temps d'inactivité en ms (ici 1 seconde)
+
+                // Mouse interaction
+                canvas.addEventListener("mousemove", (e) => {
+                    // console.log("motions");
+                    clearTimeout(inactivityTimeout); // Réinitialise le timer à chaque mouvement
+
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+
+                    mousePosition = {
+                        x: (e.clientX - rect.left) * scaleX,
+                        y: (e.clientY - rect.top) * scaleY,
+                    };
+
+                    // Démarre un nouveau timer pour remettre la position à null
+                    inactivityTimeout = setTimeout(() => {
+                        mousePosition = null;
+                    }, inactivityDelay);
+                });
+
+                canvas.addEventListener("mouseleave", () => {
+                    clearTimeout(inactivityTimeout); // Annule le timer en cas de sortie du canvas
+                    mousePosition = null;
+                });
+
+                window.addEventListener("resize", handleResize);
+
+                // Initialiser les agents en les reshuffle plusieurs fois
+                reshufleInit(10);
+
+                // Démarrer la simulation après 2 secondes
+                setTimeout(() => {
+                    animate(performance.now());
+                }, 500);
+            }
+
+            // Start
+            init();
+        </script>
+    </body>
+</html>
+
+<!-- Never grouping (electric synapse)
+{
+    "sensorOffset": 7,
+    "edgeAvoidance": 0.8,
+    "agentSpeed": 1.7,
+    "trailStrength": 2.9,
+    "evaporationRate": 0.043,
+    "brushSize": 4,
+    "brushStrength": 1.5,
+    "lastTime": 307726.9,
+    "deltaTime": 0.016600000000034924,
+    "baseHue": 101,
+    "hueRange": 73,
+    "lightnessRange": 22
+}
+-->
+
+<!-- Mold with tentacles
+{
+    "sensorOffset": 6,
+    "edgeAvoidance": 0.9,
+    "agentSpeed": 1.2,
+    "trailStrength": 2.4,
+    "evaporationRate": 0.014,
+    "brushSize": 4,
+    "brushStrength": 1.5,
+    "lastTime": 228986.9,
+    "deltaTime": 0.06660000000000582,
+    "baseHue": 273,
+    "hueRange": 48,
+    "lightnessRange": 31,
+    "escapeThreshold": 0.9549688557704362
+}
+-->
+
+<!-- The shy one
+{
+    "sensorOffset": 26,
+    "edgeAvoidance": 0.6,
+    "agentSpeed": 0.9,
+    "trailStrength": 2.9,
+    "evaporationRate": 0.006,
+    "brushSize": 4,
+    "brushStrength": 1.5,
+    "lastTime": 174809.2,
+    "deltaTime": 0.05010000000000582,
+    "baseHue": 183,
+    "hueRange": 45,
+    "lightnessRange": 42,
+    "escapeThreshold": 0.8420583712680828
+}
+-->

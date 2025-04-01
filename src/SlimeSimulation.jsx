@@ -260,86 +260,119 @@ const SlimeSimulation = (props) => {
 
   // Fonction pour rasteriser le SVG fourni en une liste de coordonnées de pixels valides
   const rasterizeSVG = useCallback(async (svgString, width, height) => {
+    console.log(
+      "Rasterizing SVG string:",
+      svgString?.substring(0, 100) + "...",
+    ); // Log tronqué
     return new Promise((resolve) => {
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = width;
-      tempCanvas.height = height;
-      const tempCtx = tempCanvas.getContext("2d");
-
-      // Utiliser DOMParser pour créer un élément SVG à partir de la chaîne
       const parser = new DOMParser();
       const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-      const svgElement = svgDoc.querySelector("svg");
 
-      if (!svgElement) {
-        console.error("Invalid SVG string provided.");
+      // Vérification explicite d'erreur de parsing
+      const parseError = svgDoc.querySelector("parsererror");
+      if (parseError) {
+        console.error("Error parsing SVG string:", parseError.textContent);
+        resolve([]); // Échouer proprement si le SVG est malformé
+        return;
+      }
+
+      // Utiliser documentElement est plus sûr pour obtenir la racine <svg>
+      const svgElement = svgDoc.documentElement;
+
+      if (!svgElement || svgElement.nodeName !== "svg") {
+        console.error(
+          "Invalid SVG string provided - Could not find root <svg> element.",
+        );
         resolve([]);
         return;
       }
 
-      // Corriger potentiellement les dimensions si non définies ou relatives
-      if (
-        !svgElement.getAttribute("width") ||
-        svgElement.getAttribute("width").includes("%")
-      ) {
-        svgElement.setAttribute("width", width); // Assigner la largeur cible
-      }
-      if (
-        !svgElement.getAttribute("height") ||
-        svgElement.getAttribute("height").includes("%")
-      ) {
-        svgElement.setAttribute("height", height); // Assigner la hauteur cible
-      }
+      // --- ON NE MODIFIE PLUS LES ATTRIBUTS WIDTH/HEIGHT ICI ---
+      // // Supprimé:
+      // if (!svgElement.getAttribute('width') || svgElement.getAttribute('width').includes('%')) {
+      //     svgElement.setAttribute('width', width);
+      // }
+      // // Supprimé:
+      // if (!svgElement.getAttribute('height') || svgElement.getAttribute('height').includes('%')) {
+      //     svgElement.setAttribute('height', height);
+      // }
+      // --- FIN DE LA SUPPRESSION ---
 
       const svgData = new XMLSerializer().serializeToString(svgElement);
+      // console.log("Serialized SVG data:", svgData); // Optionnel: décommenter pour voir
+
       const svgURL =
         "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
+      // console.log("Generated SVG data URL:", svgURL); // Optionnel: décommenter pour voir
 
       const img = new Image();
+
       img.onload = () => {
-        // Dessiner l'image centrée avec mise à l'échelle comme dans l'original
-        const aspectRatio = img.width / img.height;
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext("2d");
+
+        // Calcul du ratio et centrage pour drawImage
+        const imgAspect = img.naturalWidth / img.naturalHeight; // Utiliser naturalWidth/Height
+        const canvasAspect = width / height;
         let drawWidth, drawHeight;
-        // Adapter le scale * 1.6 de l'original
-        const targetScale = 1;
-        if (width / height > aspectRatio) {
+        // Adapter le scale * 1.6 de l'original - C'est ici qu'on gère la taille désirée
+        const targetScale = 1.6;
+
+        if (canvasAspect > imgAspect) {
+          // Canvas plus large que l'image
           drawHeight = height * targetScale;
-          drawWidth = drawHeight * aspectRatio;
+          drawWidth = drawHeight * imgAspect;
         } else {
+          // Canvas plus haut ou ratio égal
           drawWidth = width * targetScale;
-          drawHeight = drawWidth / aspectRatio;
+          drawHeight = drawWidth / imgAspect;
         }
 
-        // Centrer l'image surdimensionnée (peut déborder, c'est voulu pour le scale)
         const offsetX = (width - drawWidth) / 2;
         const offsetY = (height - drawHeight) / 2;
 
         tempCtx.clearRect(0, 0, width, height);
+        // drawImage gère la mise à l'échelle de l'image source vers les dimensions drawWidth/Height
         tempCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
-        // Extraire les pixels non transparents
-        const imageData = tempCtx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        const validPixels = [];
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const index = (y * width + x) * 4;
-            if (data[index + 3] > 10) {
-              // Utiliser un seuil > 0 pour l'alpha
-              validPixels.push({ x, y });
+        // Extraction des pixels
+        try {
+          const imageData = tempCtx.getImageData(0, 0, width, height);
+          const data = imageData.data;
+          const validPixels = [];
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const index = (y * width + x) * 4;
+              if (data[index + 3] > 10) {
+                // Seuil Alpha
+                validPixels.push({ x, y });
+              }
             }
           }
+          console.log(
+            `Rasterized SVG: Found ${validPixels.length} valid pixels.`,
+          );
+          resolve(validPixels);
+        } catch (e) {
+          console.error(
+            "Error getting ImageData (possible CORS issue if SVG linked external resources, unlikely with data URL):",
+            e,
+          );
+          resolve([]); // Échouer proprement
         }
-        // console.log(`Rasterized SVG: Found ${validPixels.length} valid pixels.`);
-        resolve(validPixels);
       };
+
       img.onerror = (err) => {
-        console.error("Error loading SVG image for rasterization:", err);
-        resolve([]); // Renvoyer un tableau vide en cas d'erreur
+        console.error("Error loading SVG image for rasterization. Event:", err);
+        console.error("SVG URL that failed:", svgURL);
+        resolve([]); // Échouer proprement
       };
+
       img.src = svgURL;
     });
-  }, []);
+  }, []); // Dependencies si nécessaire (ici vide)
 
   // Appliquer l'effet de pinceau basé sur la position de la souris
   const applyBrushEffect = useCallback(() => {
