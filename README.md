@@ -8,9 +8,9 @@ A highly customizable React component to simulate the fascinating behavior of un
 
 ---
 
-**➡️ Insert your awesome demo GIF here! ⬅️**
+**➡️ demo GIF here! ⬅️**
 
-_(Replace the comment below with your image tag once you have the GIF)_
+![Slim Simulation Demo](https://raw.githubusercontent.com/LightInn/ReactSlimeSimulation/main/output.gif)
 
 ---
 
