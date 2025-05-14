@@ -30,43 +30,7 @@ const generateRandomSettings = () => ({
 });
 
 // --- Fonctions utilitaires (adaptées pour React / Refs) ---
-// Fonction utilitaire pour extraire les chemins d'un SVG
-function extractPathsFromSVG(svgString) {
-  try {
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-    
-    // Vérifier si le parsing a fonctionné
-    if (svgDoc.querySelector("parsererror")) {
-      console.error("Erreur lors de l'extraction des chemins SVG");
-      return '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
-    }
-    
-    // Extraire tous les éléments path
-    const paths = svgDoc.querySelectorAll('path');
-    let pathsHtml = '';
-    
-    if (paths.length === 0) {
-      // Pas de chemins, ajouter une forme par défaut
-      return '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
-    }
-    
-    // Convertir chaque chemin
-    paths.forEach(path => {
-      const d = path.getAttribute('d');
-      if (d) {
-        // Utiliser uniquement l'attribut d et fill, ignorer les autres attributs qui pourraient causer des problèmes
-        pathsHtml += `<path d="${d}" fill="white" />`;
-      }
-    });
-    
-    return pathsHtml || '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
-  } catch (e) {
-    console.error("Erreur lors du traitement du SVG:", e);
-    // Retourner une forme simple en cas d'erreur
-    return '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
-  }
-}
+// La fonction extractPathsFromSVG n'est plus nécessaire et est supprimée.
 
 function randomInRange(min, max) {
   return Math.random() * (max - min) + min;
@@ -302,16 +266,60 @@ const SlimeSimulation = (props) => {
       "Rasterizing SVG string:",
       svgString?.substring(0, 100) + "...",
     ); // Log tronqué
+
+    let originalViewBox = '0 0 200 200'; // Default fallback for viewBox
+    let originalContent = '<rect x="0" y="0" width="100%" height="100%" fill="white"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20" fill="black">Fallback Shape</text></rect>'; // Default content if SVG is invalid
+
+    try {
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+      const svgRoot = svgDoc.documentElement;
+
+      if (svgDoc.querySelector("parsererror") || !svgRoot || svgRoot.tagName.toLowerCase() !== 'svg') {
+        console.error("Erreur lors du parsing du SVG fourni ou ce n'est pas un SVG valide. Utilisation du contenu par défaut.");
+      } else {
+        const vb = svgRoot.getAttribute('viewBox');
+        if (vb) {
+          originalViewBox = vb;
+        } else {
+          const w = svgRoot.getAttribute('width');
+          const h = svgRoot.getAttribute('height');
+          if (w && h) {
+            originalViewBox = `0 0 ${w} ${h}`;
+          } else {
+            // If no viewBox and no width/height, use a common default or try to infer
+            // For now, relies on the initial '0 0 200 200' or user must provide viewBox
+            console.warn("SVG n'a pas de viewBox ou de dimensions width/height explicites. Le rendu pourrait ne pas être comme attendu si le contenu n'est pas dans un viewBox de 200x200.");
+          }
+        }
+        // Utiliser fill="currentColor" ou des styles CSS pour la couleur du texte dans le SVG par défaut
+        // S'assurer que le contenu SVG par défaut est visible
+        if (svgRoot.innerHTML.trim() === "") {
+            originalContent = '<rect x="0" y="0" width="100%" height="100%" fill="white"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="gray">Empty SVG</text></rect>';
+        } else {
+            originalContent = svgRoot.innerHTML;
+        }
+      }
+    } catch (e) {
+      console.error("Exception lors du traitement du SVG fourni:", e);
+      // originalViewBox and originalContent remain as defaults
+    }
     
-    // Créer une version simplifiée du SVG pour le rasterizing
-    // Créer un SVG de base qui fonctionnera dans tous les navigateurs
+    // Créer un SVG qui imbrique le contenu SVG de l'utilisateur,
+    // en utilisant preserveAspectRatio pour le centrer et le mettre à l'échelle.
     const simplifiedSVG = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <g fill="white">
-          <rect x="0" y="0" width="${width}" height="${height}" fill="none"/>
-          <!-- Extraction simplifiée des chemins -->
-          ${extractPathsFromSVG(svgString)}
-        </g>
+      <svg xmlns="http://www.w3.org/2000/svg" 
+           width="${width}" 
+           height="${height}" 
+           viewBox="0 0 ${width} ${height}">
+        <svg 
+          viewBox="${originalViewBox}" 
+          preserveAspectRatio="xMidYMid meet" 
+          width="100%" 
+          height="100%"
+          x="0" y="0">
+          ${originalContent}
+        </svg>
       </svg>
     `;
     
