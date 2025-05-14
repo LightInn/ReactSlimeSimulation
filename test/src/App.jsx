@@ -1,4 +1,4 @@
-import SlimeSimulation from "../../dist/index.modern";
+import SlimeSimulation from "../../src/SlimeSimulation";
 
 const CUSTOM_SVG = `
   <svg id="spawnShape" width="100%" height="100%" viewBox="0 0 200 350" preserveAspectRatio="xMidYMid meet">
