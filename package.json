@@ -1,12 +1,12 @@
 {
   "name": "react-slime-simulation",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A customizable React component for simulating slime mold behavior.",
   "author": "Breval Le Floch",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LightInn/react-slime-simulation.git"
+    "url": "https://github.com/LightInn/ReactSlimeSimulation"
   },
   "keywords": [
     "react",
