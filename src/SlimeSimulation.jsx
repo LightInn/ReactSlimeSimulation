@@ -25,8 +25,8 @@ const generateRandomSettings = () => ({
   brushStrength: 1.5,
   pixelScale: 6,
   edgeThreshold: 3,
-  reshuffleCount: 10, // Comme dans l'original reshufleInit(10)
-  startDelay: 500, // Délai avant démarrage animation
+  reshuffleCount: 25, // Comme dans l'original reshufleInit(10)
+  startDelay: 250, // Délai avant démarrage animation
 });
 
 // --- Fonctions utilitaires (adaptées pour React / Refs) ---

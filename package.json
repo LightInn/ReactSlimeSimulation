@@ -1,6 +1,6 @@
 {
   "name": "react-slime-simulation",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A customizable React component for simulating slime mold behavior.",
   "author": "Breval Le Floch",
   "license": "MIT",
@@ -33,9 +33,9 @@
     "react-dom": ">=16.8.0"
   },
   "devDependencies": {
-    "microbundle": "^0.15.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "microbundle": "0.15.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   },
   "dependencies": {
   },
