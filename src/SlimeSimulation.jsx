@@ -30,6 +30,44 @@ const generateRandomSettings = () => ({
 });
 
 // --- Fonctions utilitaires (adaptées pour React / Refs) ---
+// Fonction utilitaire pour extraire les chemins d'un SVG
+function extractPathsFromSVG(svgString) {
+  try {
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+    
+    // Vérifier si le parsing a fonctionné
+    if (svgDoc.querySelector("parsererror")) {
+      console.error("Erreur lors de l'extraction des chemins SVG");
+      return '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
+    }
+    
+    // Extraire tous les éléments path
+    const paths = svgDoc.querySelectorAll('path');
+    let pathsHtml = '';
+    
+    if (paths.length === 0) {
+      // Pas de chemins, ajouter une forme par défaut
+      return '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
+    }
+    
+    // Convertir chaque chemin
+    paths.forEach(path => {
+      const d = path.getAttribute('d');
+      if (d) {
+        // Utiliser uniquement l'attribut d et fill, ignorer les autres attributs qui pourraient causer des problèmes
+        pathsHtml += `<path d="${d}" fill="white" />`;
+      }
+    });
+    
+    return pathsHtml || '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
+  } catch (e) {
+    console.error("Erreur lors du traitement du SVG:", e);
+    // Retourner une forme simple en cas d'erreur
+    return '<rect x="10" y="10" width="80%" height="80%" fill="white" />';
+  }
+}
+
 function randomInRange(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -264,115 +302,125 @@ const SlimeSimulation = (props) => {
       "Rasterizing SVG string:",
       svgString?.substring(0, 100) + "...",
     ); // Log tronqué
+    
+    // Créer une version simplifiée du SVG pour le rasterizing
+    // Créer un SVG de base qui fonctionnera dans tous les navigateurs
+    const simplifiedSVG = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <g fill="white">
+          <rect x="0" y="0" width="${width}" height="${height}" fill="none"/>
+          <!-- Extraction simplifiée des chemins -->
+          ${extractPathsFromSVG(svgString)}
+        </g>
+      </svg>
+    `;
+    
     return new Promise((resolve) => {
-      const parser = new DOMParser();
-      const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-
-      // Vérification explicite d'erreur de parsing
-      const parseError = svgDoc.querySelector("parsererror");
-      if (parseError) {
-        console.error("Error parsing SVG string:", parseError.textContent);
-        resolve([]); // Échouer proprement si le SVG est malformé
-        return;
-      }
-
-      // Utiliser documentElement est plus sûr pour obtenir la racine <svg>
-      const svgElement = svgDoc.documentElement;
-
-      if (!svgElement || svgElement.nodeName !== "svg") {
-        console.error(
-          "Invalid SVG string provided - Could not find root <svg> element.",
-        );
-        resolve([]);
-        return;
-      }
-
-      // --- ON NE MODIFIE PLUS LES ATTRIBUTS WIDTH/HEIGHT ICI ---
-      // // Supprimé:
-      // if (!svgElement.getAttribute('width') || svgElement.getAttribute('width').includes('%')) {
-      //     svgElement.setAttribute('width', width);
-      // }
-      // // Supprimé:
-      // if (!svgElement.getAttribute('height') || svgElement.getAttribute('height').includes('%')) {
-      //     svgElement.setAttribute('height', height);
-      // }
-      // --- FIN DE LA SUPPRESSION ---
-
-      const svgData = new XMLSerializer().serializeToString(svgElement);
-      // console.log("Serialized SVG data:", svgData); // Optionnel: décommenter pour voir
-
-      const svgURL =
-        "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
-      // console.log("Generated SVG data URL:", svgURL); // Optionnel: décommenter pour voir
-
-      const img = new Image();
-
-      img.onload = () => {
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = width;
-        tempCanvas.height = height;
-        const tempCtx = tempCanvas.getContext("2d");
-
-        // Calcul du ratio et centrage pour drawImage
-        const imgAspect = img.naturalWidth / img.naturalHeight; // Utiliser naturalWidth/Height
-        const canvasAspect = width / height;
-        let drawWidth, drawHeight;
-        // Adapter le scale * 1.6 de l'original - C'est ici qu'on gère la taille désirée
-        const targetScale = 1.6;
-
-        if (canvasAspect > imgAspect) {
-          // Canvas plus large que l'image
-          drawHeight = height * targetScale;
-          drawWidth = drawHeight * imgAspect;
-        } else {
-          // Canvas plus haut ou ratio égal
-          drawWidth = width * targetScale;
-          drawHeight = drawWidth / imgAspect;
-        }
-
-        const offsetX = (width - drawWidth) / 2;
-        const offsetY = (height - drawHeight) / 2;
-
-        tempCtx.clearRect(0, 0, width, height);
-        // drawImage gère la mise à l'échelle de l'image source vers les dimensions drawWidth/Height
-        tempCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-
-        // Extraction des pixels
-        try {
-          const imageData = tempCtx.getImageData(0, 0, width, height);
-          const data = imageData.data;
-          const validPixels = [];
-          for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-              const index = (y * width + x) * 4;
-              if (data[index + 3] > 10) {
-                // Seuil Alpha
-                validPixels.push({ x, y });
+      try {
+        // Approche de rendu direct en utilisant une image
+        const img = new Image();
+        const svgBlob = new Blob([simplifiedSVG], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        // Définir un timeout pour éviter les blocages
+        const timeout = setTimeout(() => {
+          console.warn("SVG rasterization timed out, using fallback");
+          URL.revokeObjectURL(url);
+          resolve([]);
+        }, 5000);
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          
+          // Créer un canvas temporaire pour rasteriser
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = width;
+          tempCanvas.height = height;
+          const tempCtx = tempCanvas.getContext("2d");
+          
+          // Dessiner l'image au centre du canvas
+          const imgAspect = img.naturalWidth / img.naturalHeight;
+          const canvasAspect = width / height;
+          let drawWidth, drawHeight;
+          
+          if (canvasAspect > imgAspect) {
+            drawHeight = height;
+            drawWidth = drawHeight * imgAspect;
+          } else {
+            drawWidth = width;
+            drawHeight = drawWidth / imgAspect;
+          }
+          
+          const offsetX = (width - drawWidth) / 2;
+          const offsetY = (height - drawHeight) / 2;
+          
+          tempCtx.clearRect(0, 0, width, height);
+          tempCtx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+          
+          // Extraire les pixels non transparents
+          try {
+            const imageData = tempCtx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const validPixels = [];
+            
+            for (let y = 0; y < height; y++) {
+              for (let x = 0; x < width; x++) {
+                const index = (y * width + x) * 4;
+                // Considérer un pixel comme valide s'il n'est pas totalement transparent
+                if (data[index + 3] > 10) {
+                  validPixels.push({ x, y });
+                }
               }
             }
+            
+            console.log(`Rasterized SVG: Found ${validPixels.length} valid pixels.`);
+            URL.revokeObjectURL(url);
+            
+            // Si aucun pixel valide n'a été trouvé, créer une forme simple
+            if (validPixels.length === 0) {
+              console.warn("No valid pixels found in SVG, creating fallback shape");
+              
+              // Créer une forme simple (cercle ou rectangle) au centre
+              const centerX = Math.floor(width / 2);
+              const centerY = Math.floor(height / 2);
+              const radius = Math.min(width, height) / 4;
+              
+              for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                  const dx = x - centerX;
+                  const dy = y - centerY;
+                  const distance = Math.sqrt(dx * dx + dy * dy);
+                  
+                  // Créer un cercle de pixels valides
+                  if (distance <= radius) {
+                    validPixels.push({ x, y });
+                  }
+                }
+              }
+            }
+            
+            resolve(validPixels);
+          } catch (e) {
+            console.error("Error processing rasterized SVG:", e);
+            URL.revokeObjectURL(url);
+            resolve([]);
           }
-          console.log(
-            `Rasterized SVG: Found ${validPixels.length} valid pixels.`,
-          );
-          resolve(validPixels);
-        } catch (e) {
-          console.error(
-            "Error getting ImageData (possible CORS issue if SVG linked external resources, unlikely with data URL):",
-            e,
-          );
-          resolve([]); // Échouer proprement
-        }
-      };
-
-      img.onerror = (err) => {
-        console.error("Error loading SVG image for rasterization. Event:", err);
-        console.error("SVG URL that failed:", svgURL);
-        resolve([]); // Échouer proprement
-      };
-
-      img.src = svgURL;
+        };
+        
+        img.onerror = (err) => {
+          clearTimeout(timeout);
+          console.error("Error loading SVG image for rasterization:", err);
+          URL.revokeObjectURL(url);
+          resolve([]);
+        };
+        
+        img.src = url;
+      } catch (e) {
+        console.error("Error in SVG rasterization process:", e);
+        resolve([]);
+      }
     });
-  }, []); // Dependencies si nécessaire (ici vide)
+  }, []); // No dependencies
 
   // Appliquer l'effet de pinceau basé sur la position de la souris
   const applyBrushEffect = useCallback(() => {
